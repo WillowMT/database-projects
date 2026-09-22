@@ -1,0 +1,92 @@
+erDiagram
+    direction TB
+    DEPARTMENTS ||--o{ PROGRAMS : offers
+    PROGRAMS ||--o{ STUDENTS : admits_to
+    STUDENTS ||--o| STUDENT_PROFILES : has_optional
+    DEPARTMENTS ||--o{ INSTRUCTORS : employs
+    DEPARTMENTS ||--o{ COURSES : owns
+    COURSES ||--o{ SECTIONS : scheduled_as
+    TERMS ||--o{ SECTIONS : contains
+    INSTRUCTORS o|--o{ SECTIONS : teaches
+    STUDENTS ||--o{ ENROLLMENTS : creates
+    SECTIONS ||--o{ ENROLLMENTS : receives
+    ENROLLMENTS ||--o{ PAYMENTS : paid_by
+
+    DEPARTMENTS {
+        NUMBER department_id PK
+        VARCHAR2 department_code UK
+        VARCHAR2 department_name UK
+        VARCHAR2 office_phone
+    }
+    PROGRAMS {
+        NUMBER program_id PK
+        NUMBER department_id FK
+        VARCHAR2 program_code UK
+        VARCHAR2 program_name UK
+        VARCHAR2 award_level
+    }
+    STUDENTS {
+        NUMBER student_id PK
+        NUMBER program_id FK
+        VARCHAR2 student_number UK
+        VARCHAR2 full_name
+        VARCHAR2 university_email UK
+        DATE admitted_on
+        VARCHAR2 student_status
+    }
+    STUDENT_PROFILES {
+        NUMBER student_id PK,FK
+        DATE birth_date
+        VARCHAR2 mobile_phone
+        VARCHAR2 emergency_contact
+        CHAR consent_to_contact
+    }
+    INSTRUCTORS {
+        NUMBER instructor_id PK
+        NUMBER department_id FK
+        VARCHAR2 full_name
+        VARCHAR2 university_email UK
+        VARCHAR2 employment_status
+    }
+    COURSES {
+        NUMBER course_id PK
+        NUMBER department_id FK
+        VARCHAR2 course_code UK
+        VARCHAR2 course_title
+        NUMBER credits
+        NUMBER current_tuition
+    }
+    TERMS {
+        NUMBER term_id PK
+        VARCHAR2 term_code UK
+        VARCHAR2 term_name
+        DATE starts_on
+        DATE ends_on
+        VARCHAR2 term_status
+    }
+    SECTIONS {
+        NUMBER section_id PK
+        NUMBER course_id FK
+        NUMBER term_id FK
+        NUMBER instructor_id FK "nullable"
+        VARCHAR2 section_code
+        VARCHAR2 delivery_mode
+        VARCHAR2 section_status
+    }
+    ENROLLMENTS {
+        NUMBER enrollment_id PK
+        NUMBER student_id FK
+        NUMBER section_id FK
+        DATE enrolled_on
+        VARCHAR2 enrollment_status
+        NUMBER booked_tuition
+        VARCHAR2 final_grade "nullable"
+    }
+    PAYMENTS {
+        NUMBER payment_id PK
+        NUMBER enrollment_id FK
+        DATE paid_on
+        NUMBER amount
+        VARCHAR2 payment_method
+        VARCHAR2 payment_reference UK
+    }

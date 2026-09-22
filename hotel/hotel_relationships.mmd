@@ -1,0 +1,79 @@
+erDiagram
+    direction TB
+    GUESTS ||--o{ RESERVATIONS : makes
+    EMPLOYEES o|--o{ RESERVATIONS : handles
+    ROOM_TYPES ||--o{ ROOMS : categorizes
+    RESERVATIONS ||--o{ RESERVATION_ROOMS : includes
+    ROOMS ||--o{ RESERVATION_ROOMS : assigned_to
+    RESERVATIONS ||--o{ SERVICE_CHARGES : incurs
+    SERVICES ||--o{ SERVICE_CHARGES : describes
+    RESERVATIONS ||--o| INVOICES : billed_by
+    INVOICES ||--o{ PAYMENTS : receives
+
+    GUESTS {
+        NUMBER guest_id PK
+        VARCHAR2 full_name
+        VARCHAR2 email UK
+        VARCHAR2 phone
+        VARCHAR2 country
+    }
+    ROOM_TYPES {
+        NUMBER room_type_id PK
+        VARCHAR2 type_name UK
+        NUMBER capacity
+        NUMBER standard_rate
+    }
+    ROOMS {
+        NUMBER room_id PK
+        VARCHAR2 room_number UK
+        NUMBER room_type_id FK
+        VARCHAR2 room_status
+    }
+    EMPLOYEES {
+        NUMBER employee_id PK
+        VARCHAR2 full_name
+        VARCHAR2 email UK
+        VARCHAR2 job_title
+    }
+    RESERVATIONS {
+        NUMBER reservation_id PK
+        NUMBER guest_id FK
+        NUMBER employee_id FK "nullable"
+        DATE booked_on
+        DATE check_in
+        DATE check_out
+        VARCHAR2 reservation_status
+    }
+    RESERVATION_ROOMS {
+        NUMBER reservation_id PK,FK
+        NUMBER room_id PK,FK
+        NUMBER nightly_rate
+        NUMBER occupants
+    }
+    SERVICES {
+        NUMBER service_id PK
+        VARCHAR2 service_name UK
+        NUMBER list_price
+    }
+    SERVICE_CHARGES {
+        NUMBER charge_id PK
+        NUMBER reservation_id FK
+        NUMBER service_id FK
+        DATE charged_on
+        NUMBER quantity
+        NUMBER unit_price
+    }
+    INVOICES {
+        NUMBER invoice_id PK
+        NUMBER reservation_id FK,UK
+        DATE issued_on
+        DATE due_on
+    }
+    PAYMENTS {
+        NUMBER payment_id PK
+        NUMBER invoice_id FK
+        DATE paid_on
+        NUMBER amount
+        VARCHAR2 payment_method
+        VARCHAR2 payment_reference UK
+    }

@@ -1,0 +1,101 @@
+erDiagram
+  CUSTOMERS ||--o{ SHIPMENTS : "customer_id"
+  DEPOTS ||--o{ VEHICLES : "current_depot_id (SET NULL)"
+  DEPOTS ||--o{ SHIPMENTS : "origin_depot_id"
+  DEPOTS ||--o{ SHIPMENTS : "destination_depot_id"
+  SHIPMENTS ||--o{ SHIPMENT_TRACKING : "shipment_id (CASCADE)"
+  DEPOTS o|--o{ SHIPMENT_TRACKING : "event_depot_id (SET NULL)"
+  SHIPMENTS ||--o| DELIVERY_RECEIPTS : "shipment_id shared PK (CASCADE)"
+  VEHICLES ||--o{ TRIPS : "vehicle_id"
+  DRIVERS o|--o{ TRIPS : "driver_id (SET NULL)"
+  DEPOTS ||--o{ TRIPS : "start_depot_id"
+  DEPOTS ||--o{ TRIPS : "end_depot_id"
+  TRIPS ||--o{ TRIP_SHIPMENTS : "trip_id (CASCADE)"
+  SHIPMENTS ||--o{ TRIP_SHIPMENTS : "shipment_id"
+  VEHICLES ||--o{ MAINTENANCE_RECORDS : "vehicle_id"
+
+  CUSTOMERS {
+    NUMBER customer_id PK
+    VARCHAR2 customer_name
+    VARCHAR2 contact_email UK
+    VARCHAR2 contact_phone
+    VARCHAR2 customer_status
+  }
+  DEPOTS {
+    NUMBER depot_id PK
+    VARCHAR2 depot_code UK
+    VARCHAR2 depot_name
+    VARCHAR2 province
+    NUMBER latitude
+    NUMBER longitude
+    VARCHAR2 depot_status
+  }
+  DRIVERS {
+    NUMBER driver_id PK
+    VARCHAR2 full_name
+    VARCHAR2 license_no UK
+    DATE license_expiry
+    VARCHAR2 phone UK
+    VARCHAR2 driver_status
+  }
+  VEHICLES {
+    NUMBER vehicle_id PK
+    VARCHAR2 registration_no UK
+    VARCHAR2 vehicle_type
+    NUMBER capacity_kg
+    VARCHAR2 vehicle_status
+    NUMBER current_depot_id FK
+  }
+  SHIPMENTS {
+    NUMBER shipment_id PK
+    VARCHAR2 shipment_no UK
+    NUMBER customer_id FK
+    NUMBER origin_depot_id FK
+    NUMBER destination_depot_id FK
+    DATE booked_on
+    DATE promised_date
+    NUMBER weight_kg
+    NUMBER freight_charge
+    VARCHAR2 shipment_status
+  }
+  SHIPMENT_TRACKING {
+    NUMBER tracking_id PK
+    NUMBER shipment_id FK
+    DATE event_time
+    VARCHAR2 event_status
+    NUMBER event_depot_id FK
+    VARCHAR2 event_note
+  }
+  DELIVERY_RECEIPTS {
+    NUMBER shipment_id PK,FK
+    VARCHAR2 received_by
+    DATE received_on
+    VARCHAR2 proof_reference UK
+    VARCHAR2 receipt_status
+  }
+  TRIPS {
+    NUMBER trip_id PK
+    VARCHAR2 trip_no UK
+    NUMBER vehicle_id FK
+    NUMBER driver_id FK
+    NUMBER start_depot_id FK
+    NUMBER end_depot_id FK
+    DATE planned_departure
+    DATE planned_arrival
+    VARCHAR2 trip_status
+  }
+  TRIP_SHIPMENTS {
+    NUMBER trip_id PK,FK
+    NUMBER shipment_id PK,FK
+    NUMBER leg_sequence UK
+    NUMBER loaded_kg
+  }
+  MAINTENANCE_RECORDS {
+    NUMBER maintenance_id PK
+    NUMBER vehicle_id FK
+    DATE maintenance_date
+    VARCHAR2 maintenance_type
+    NUMBER odometer_km
+    NUMBER maintenance_cost
+    VARCHAR2 maintenance_status
+  }

@@ -1,0 +1,87 @@
+erDiagram
+    members {
+      NUMBER(6) member_id PK "required"
+      VARCHAR2(100) full_name "required"
+      VARCHAR2(120) email UK "required"
+      VARCHAR2(25) phone "optional"
+      DATE birth_date "required"
+      VARCHAR2(12) member_status "required default ACTIVE"
+      DATE joined_on "required default TRUNC(SYSDATE)"
+    }
+    member_profiles {
+      NUMBER(6) member_id PK, FK "required shared PK"
+      VARCHAR2(100) emergency_name "required"
+      VARCHAR2(25) emergency_phone "required"
+      VARCHAR2(10) preferred_contact "required default EMAIL"
+    }
+    membership_plans {
+      NUMBER(6) plan_id PK "required"
+      VARCHAR2(50) plan_name UK "required"
+      NUMBER(2) duration_months "required"
+      NUMBER(10,2) list_price "required"
+      NUMBER(2) visits_per_week "optional"
+      VARCHAR2(12) plan_status "required default ACTIVE"
+    }
+    memberships {
+      NUMBER(6) membership_id PK "required"
+      NUMBER(6) member_id FK "required"
+      NUMBER(6) plan_id FK "required"
+      DATE start_date "required"
+      DATE end_date "required"
+      NUMBER(10,2) booked_price "required historical fact"
+      VARCHAR2(12) membership_status "required default ACTIVE"
+    }
+    trainers {
+      NUMBER(6) trainer_id PK "required"
+      VARCHAR2(100) full_name "required"
+      VARCHAR2(120) email UK "required"
+      VARCHAR2(60) specialty "required"
+      VARCHAR2(12) trainer_status "required default ACTIVE"
+    }
+    studios {
+      NUMBER(6) studio_id PK "required"
+      VARCHAR2(50) studio_name UK "required"
+      NUMBER(4) capacity "required"
+      VARCHAR2(12) studio_status "required default OPEN"
+    }
+    class_types {
+      NUMBER(6) class_type_id PK "required"
+      VARCHAR2(60) type_name UK "required"
+      NUMBER(3) default_minutes "required"
+      NUMBER(10,2) list_fee "required default 0"
+      VARCHAR2(12) class_status "required default ACTIVE"
+    }
+    class_sessions {
+      NUMBER(6) session_id PK "required"
+      NUMBER(6) class_type_id FK "required"
+      NUMBER(6) trainer_id FK "optional SET NULL"
+      NUMBER(6) studio_id FK "required"
+      DATE starts_at "required"
+      DATE ends_at "required"
+      VARCHAR2(12) session_status "required default SCHEDULED"
+    }
+    class_bookings {
+      NUMBER(6) booking_id PK "required"
+      NUMBER(6) session_id FK "required CASCADE"
+      NUMBER(6) member_id FK "required"
+      DATE booked_at "required default SYSDATE"
+      VARCHAR2(12) booking_status "required default BOOKED"
+    }
+    payments {
+      NUMBER(6) payment_id PK "required"
+      NUMBER(6) membership_id FK "required"
+      NUMBER(3) installment_no "required"
+      DATE paid_on "required default TRUNC(SYSDATE)"
+      NUMBER(10,2) amount "required"
+      VARCHAR2(12) payment_method "required"
+      VARCHAR2(60) payment_reference UK "required"
+    }
+    members ||--o| member_profiles : has
+    members ||--o{ memberships : purchases
+    membership_plans ||--o{ memberships : selected_by
+    memberships ||--o{ payments : receives
+    class_types ||--o{ class_sessions : schedules
+    trainers o|--o{ class_sessions : leads
+    studios ||--o{ class_sessions : hosts
+    members ||--o{ class_bookings : makes
+    class_sessions ||--o{ class_bookings : has

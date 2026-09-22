@@ -1,0 +1,96 @@
+%%{init: {'theme': 'base', 'themeVariables': {'background': '#ffffff', 'primaryColor': '#eef4ff', 'primaryTextColor': '#15243a', 'primaryBorderColor': '#2d5f9b', 'lineColor': '#476b8d', 'fontFamily': 'Arial'}}}%%
+erDiagram
+    CUSTOMERS {
+        NUMBER customer_id PK
+        VARCHAR2 full_name
+        VARCHAR2 email UK
+        VARCHAR2 phone
+        VARCHAR2 customer_status
+        DATE created_on
+    }
+    ADDRESSES {
+        NUMBER address_id PK
+        NUMBER customer_id FK
+        VARCHAR2 address_label
+        VARCHAR2 recipient_name
+        VARCHAR2 line1
+        VARCHAR2 district
+        VARCHAR2 province
+        VARCHAR2 postal_code
+        VARCHAR2 country
+    }
+    CATEGORIES {
+        NUMBER category_id PK
+        VARCHAR2 category_name UK
+        CHAR active_flag
+    }
+    PRODUCTS {
+        NUMBER product_id PK
+        NUMBER category_id FK
+        VARCHAR2 sku UK
+        VARCHAR2 product_name
+        NUMBER list_price
+        NUMBER stock_qty
+        VARCHAR2 product_status
+    }
+    CARRIERS {
+        NUMBER carrier_id PK
+        VARCHAR2 carrier_name UK
+        VARCHAR2 tracking_prefix UK
+        VARCHAR2 service_phone
+    }
+    ORDERS {
+        NUMBER order_id PK
+        NUMBER customer_id FK
+        NUMBER shipping_address_id FK
+        DATE ordered_on
+        VARCHAR2 order_status
+        NUMBER shipping_fee
+        NUMBER discount_amount
+    }
+    ORDER_ITEMS {
+        NUMBER order_id PK, FK
+        NUMBER product_id PK, FK
+        NUMBER quantity
+        NUMBER unit_price
+        NUMBER discount_amount
+    }
+    SHIPMENTS {
+        NUMBER shipment_id PK
+        NUMBER order_id FK, UK
+        NUMBER carrier_id FK
+        VARCHAR2 tracking_number UK
+        DATE shipped_on
+        DATE delivered_on
+        VARCHAR2 shipment_status
+    }
+    PAYMENTS {
+        NUMBER payment_id PK
+        NUMBER order_id FK
+        DATE paid_on
+        NUMBER amount
+        VARCHAR2 payment_method
+        VARCHAR2 payment_reference UK
+        VARCHAR2 payment_status
+    }
+    REVIEWS {
+        NUMBER review_id PK
+        NUMBER customer_id FK
+        NUMBER product_id FK
+        NUMBER rating
+        VARCHAR2 review_title
+        VARCHAR2 review_text
+        DATE reviewed_on
+        VARCHAR2 review_status
+    }
+    CUSTOMERS ||--o{ ADDRESSES : owns
+    CUSTOMERS ||--o{ ORDERS : places
+    ADDRESSES ||--o{ ORDERS : ships_to
+    CATEGORIES ||--o{ PRODUCTS : classifies
+    ORDERS ||--o{ ORDER_ITEMS : contains
+    PRODUCTS ||--o{ ORDER_ITEMS : appears_in
+    ORDERS ||--o| SHIPMENTS : has
+    CARRIERS o|--o{ SHIPMENTS : carries
+    ORDERS ||--o{ PAYMENTS : receives
+    CUSTOMERS ||--o{ REVIEWS : writes
+    PRODUCTS ||--o{ REVIEWS : receives
