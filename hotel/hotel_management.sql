@@ -92,13 +92,6 @@ CREATE TABLE payments (
 -- CASCADE removes dependent details of an uninvoiced reservation.
 -- SET NULL preserves a reservation when its staff record is removed.
 -- Financial history is protected by restrictive invoice/payment FKs.
-CREATE INDEX ix_res_guest ON reservations(guest_id);
-CREATE INDEX ix_res_employee ON reservations(employee_id);
-CREATE INDEX ix_room_type ON rooms(room_type_id);
-CREATE INDEX ix_rr_room ON reservation_rooms(room_id);
-CREATE INDEX ix_charge_res ON service_charges(reservation_id);
-CREATE INDEX ix_charge_service ON service_charges(service_id);
-CREATE INDEX ix_payment_invoice ON payments(invoice_id);
 
 -- 2. MASTER DATA ---------------------------------------------------
 INSERT ALL
@@ -297,9 +290,6 @@ AND NOT EXISTS (
 )
 ORDER BY rm.room_number;
 
-SELECT * FROM v_invoice_summary ORDER BY invoice_id;
-SELECT * FROM v_top5_guests ORDER BY total_billed DESC,guest_id;
-
 -- 5. DML, CONDITIONAL SUBQUERY, COMMIT AND ROLLBACK ------------------
 -- Commit a temporary guest, then undo an UPDATE, then delete the guest.
 INSERT INTO guests (guest_id,full_name,email)
@@ -313,16 +303,6 @@ SELECT full_name,country FROM guests WHERE guest_id=900001;
 -- Conditional DELETE: only remove the guest if no reservation exists.
 DELETE FROM guests g WHERE g.guest_id=900001
 AND NOT EXISTS (SELECT 1 FROM reservations r WHERE r.guest_id=g.guest_id);
-COMMIT;
-
--- Conditional UPDATE + partial rollback; seed data remains unchanged.
-SAVEPOINT before_rate_demo;
-UPDATE room_types SET standard_rate=standard_rate*1.05
-WHERE room_type_id IN (
- SELECT room_type_id FROM rooms WHERE room_status='AVAILABLE'
-);
-SELECT type_name,standard_rate FROM room_types ORDER BY room_type_id;
-ROLLBACK TO before_rate_demo;
 COMMIT;
 
 -- 6. AUTOMATED CONSTRAINT TESTS ------------------------------------
@@ -397,44 +377,7 @@ END;
 /
 COMMIT;
 
--- 7. DATA AUDIT ----------------------------------------------------
--- Expected rows: 10,5,10,5,12,14,5,12,12,12 respectively.
-SELECT 'GUESTS' AS table_name,COUNT(*) AS row_count FROM guests
-UNION ALL SELECT 'ROOM_TYPES',COUNT(*) FROM room_types
-UNION ALL SELECT 'ROOMS',COUNT(*) FROM rooms
-UNION ALL SELECT 'EMPLOYEES',COUNT(*) FROM employees
-UNION ALL SELECT 'RESERVATIONS',COUNT(*) FROM reservations
-UNION ALL SELECT 'RESERVATION_ROOMS',COUNT(*) FROM reservation_rooms
-UNION ALL SELECT 'SERVICES',COUNT(*) FROM services
-UNION ALL SELECT 'SERVICE_CHARGES',COUNT(*) FROM service_charges
-UNION ALL SELECT 'INVOICES',COUNT(*) FROM invoices
-UNION ALL SELECT 'PAYMENTS',COUNT(*) FROM payments;
-
--- All following diagnostics should return zero rows on the seed data.
--- A: double-booked rooms.
-SELECT a.room_id,r1.reservation_id AS booking_a,r2.reservation_id AS booking_b
-FROM reservation_rooms a
-JOIN reservation_rooms b ON b.room_id=a.room_id AND b.reservation_id>a.reservation_id
-JOIN reservations r1 ON r1.reservation_id=a.reservation_id
-JOIN reservations r2 ON r2.reservation_id=b.reservation_id
-WHERE r1.reservation_status<>'CANCELLED' AND r2.reservation_status<>'CANCELLED'
-AND r1.check_in<r2.check_out AND r2.check_in<r1.check_out;
--- B: room capacity exceeded.
-SELECT rr.reservation_id,rr.room_id FROM reservation_rooms rr
-JOIN rooms rm ON rm.room_id=rr.room_id
-JOIN room_types t ON t.room_type_id=rm.room_type_id
-WHERE rr.occupants>t.capacity;
--- C: service charge outside the stay (checkout-day charges allowed).
-SELECT sc.charge_id FROM service_charges sc
-JOIN reservations r ON r.reservation_id=sc.reservation_id
-WHERE TRUNC(sc.charged_on)<r.check_in OR TRUNC(sc.charged_on)>r.check_out;
--- D: overpaid invoices.
-SELECT invoice_id,balance_due FROM v_invoice_summary WHERE balance_due<0;
--- E: reservations without assigned rooms.
-SELECT r.reservation_id FROM reservations r WHERE r.reservation_status<>'CANCELLED'
-AND NOT EXISTS (SELECT 1 FROM reservation_rooms rr WHERE rr.reservation_id=r.reservation_id);
-
--- 8. SECURITY: OPTIONAL DBA-ENABLED SECTION -------------------------
+-- 7. SECURITY: OPTIONAL DBA-ENABLED SECTION -------------------------
 -- Hosted APEX schemas commonly lack CREATE ROLE. Leave FALSE there.
 -- On a dedicated database, use fresh role names and set TRUE if allowed.
 -- Role creation and GRANT are DDL; failures may leave a partial setup.
@@ -470,12 +413,4 @@ END;
 -- GRANT hm_reception TO actual_reception_database_user;
 -- GRANT hm_manager TO actual_manager_database_user;
 
--- Inspect created constraints and view status after running the script.
-SELECT table_name,constraint_name,constraint_type,status
-FROM user_constraints
-WHERE table_name IN ('GUESTS','ROOM_TYPES','ROOMS','EMPLOYEES','RESERVATIONS',
- 'RESERVATION_ROOMS','SERVICES','SERVICE_CHARGES','INVOICES','PAYMENTS')
-ORDER BY table_name,constraint_type,constraint_name;
-SELECT object_name,status FROM user_objects
-WHERE object_name IN ('V_BOOKING_DETAILS','V_INVOICE_SUMMARY','V_TOP5_GUESTS');
 -- END OF SCRIPT

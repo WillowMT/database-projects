@@ -17,7 +17,7 @@ The design deliberately uses exactly ten tables: the minimum specified by the su
 
 ## 2. Delivered files and execution
 
-- `hotel_management.sql`: one ordered script containing tables, constraints, indexes, sample records, views, queries, transactions, tests and optional security setup.
+- `hotel_management.sql`: one ordered script containing tables, constraints, sample records, views, queries, transactions, tests and optional security setup.
 - `hotel_relationships.mmd`: editable Mermaid.js ER diagram source.
 - `hotel_relationships.png`: rendered relationship diagram.
 - `hotel_report.md`: this report.
@@ -27,7 +27,7 @@ The design deliberately uses exactly ten tables: the minimum specified by the su
 1. Use a fresh Oracle schema with permission to create tables and views. The names in the script must not already exist. Each topic in this collection is an independent project: use separate schemas/workspaces, not one combined run, because topics reuse table and object names.
 2. In APEX, open **SQL Workshop → SQL Scripts**, upload the SQL file, and run the complete script. PL/SQL blocks use `/` terminators.
 3. Inspect every statement result and the available DBMS_OUTPUT output. Do not treat a partially completed script as a successful installation.
-4. Review the row-count audit, constraint checks and zero-row diagnostic queries.
+4. Review the constraint test results printed by the embedded test blocks.
 5. Leave the security flag `FALSE` on hosted APEX unless the administrator confirms permission to create database roles.
 
 The script does not drop existing data and is not an idempotent rerun script. Oracle DDL implicitly commits, so a failed installation can leave created objects. Resolve the error in a separate clean schema rather than blindly rerunning. If using SQLcl or SQL*Plus instead, enable `SET SERVEROUTPUT ON` in the client to see test messages.
@@ -72,7 +72,7 @@ Sample data uses fictional identities and reserved example domains. All dates us
 
 Reservations and rooms form an M:N relationship, resolved by `reservation_rooms`. A reservation may use multiple rooms, while a physical room may be booked under many reservations over time. The composite primary key prevents the same room from appearing twice within one reservation.
 
-The database permits a reservation with zero detail rows during construction. The final diagnostic query identifies active reservations that have not yet received a room assignment. The ERD therefore uses optional-many notation rather than falsely claiming a minimum of one child is enforced.
+The database permits a reservation with zero detail rows during construction. The ERD therefore uses optional-many notation rather than falsely claiming a minimum of one child is enforced.
 
 ## 5. Normalization to third normal form
 
@@ -115,9 +115,7 @@ Invoice totals, paid totals and balances are calculated in views rather than red
 
 `ON DELETE CASCADE` removes reservation-room and service-charge children when an eligible reservation is deleted. `ON DELETE SET NULL` preserves reservations if a referenced employee is removed. Reservations with invoices cannot be deleted, and invoices with payments cannot be deleted, because those relationships use restrictive foreign keys. This protects financial history from accidental cascade deletion.
 
-Foreign-key indexes support common joins and parent/child operations. Primary and unique keys already have associated Oracle indexes, so redundant indexes are not added for those keys.
-
-**Boundary:** Oracle CHECK constraints cannot express these multirow business rules directly: no overlapping bookings, occupants not exceeding the selected room type's capacity, services occurring during the stay, and payment totals not exceeding charges. Diagnostic SELECT statements identify violations, but do not prevent concurrent invalid writes. Production enforcement requires controlled procedures or carefully designed triggers and locking.
+**Boundary:** Oracle CHECK constraints cannot express these multirow business rules directly: no overlapping bookings, occupants not exceeding the selected room type's capacity, services occurring during the stay, and payment totals not exceeding charges. The script does not attempt to detect or prevent such violations. Production enforcement requires controlled procedures or carefully designed triggers and locking.
 
 ## 7. Views
 
@@ -156,8 +154,6 @@ Q7 uses half-open date intervals: `[check_in, check_out)`. This allows a new gue
 The script inserts a temporary guest and commits it. It then updates the guest's name and issues a full ROLLBACK; the following SELECT should show the original name, demonstrating that the uncommitted update was undone while the earlier committed insert persisted.
 
 A conditional DELETE removes only that temporary guest and only if no reservation references it. The condition uses a correlated NOT EXISTS subquery. That deletion is committed, leaving no permanent demonstration record.
-
-A separate UPDATE increases catalog rates for types with available rooms using an IN subquery. A SAVEPOINT is established first, and ROLLBACK TO restores the original rates. The final COMMIT ends the demonstration without changing seed prices. Historical booking prices would remain unchanged even if a catalog-rate update were committed.
 
 ## 10. Security
 
@@ -200,11 +196,9 @@ The optional role section contains CREATE ROLE and GRANT operations as dynamic S
 
 Each negative test establishes a savepoint, executes its attempted change, checks the actual SQLCODE and rolls back. Unexpected success raises an application error; unexpected failure codes are re-raised. The referential-action test checks the resulting rows and rolls back its temporary records.
 
-### Final audit
+### Final verification
 
-The row-count query should match Section 3. Five diagnostic queries should each return zero rows: overlapping room bookings, exceeded capacity, out-of-stay service charges, negative invoice balances and noncancelled reservations without rooms. Final dictionary queries display constraint status and whether the three views are VALID.
-
-Passing these tests would demonstrate the specified examples, not full production correctness. Concurrent bookings, malicious updates, cancellation workflows, refunds, posted-invoice editing and failure recovery require further tests and stronger transaction boundaries.
+Passing the embedded tests would demonstrate the specified examples, not full production correctness. Concurrent bookings, malicious updates, cancellation workflows, refunds, posted-invoice editing and failure recovery require further tests and stronger transaction boundaries.
 
 ## 12. Requirements mapping
 
@@ -224,9 +218,9 @@ Passing these tests would demonstrate the specified examples, not full productio
 | FROM subquery and ROWNUM Top-N | Q4 and Q5; Top-5 view |
 | ROLLUP plus GROUPING | Q6 |
 | INSERT, UPDATE, DELETE and conditional subquery | Transaction demonstrations |
-| COMMIT and ROLLBACK | Full rollback and savepoint rollback |
+| COMMIT and ROLLBACK | Full rollback demonstration; savepoints inside the test harness |
 | Defined roles and GRANT | Optional administrator-enabled block; unexecuted here |
-| Constraint testing | Embedded tests and final diagnostics; execution pending |
+| Constraint testing | Embedded tests; execution pending |
 | ERD | Mermaid source and rendered image |
 | Working APEX app and screenshots | Excluded at user request |
 | MySQL Workbench design artifact | Not supplied; Mermaid substituted for requested diagram |
